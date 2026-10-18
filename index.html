@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Mi Clóset</title>
+  <meta name="theme-color" content="#FBE3EA">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Mi Clóset">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,600&family=Nunito:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <h1 class="brand">Mi Clóset <svg class="sparkle" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1 L14 10 L23 12 L14 14 L12 23 L10 14 L1 12 L10 10 Z"/></svg></h1>
+      <span class="topbar-sub" id="topbar-sub"></span>
+    </div>
+  </header>
+
+  <main id="app">
+    <!-- Clóset -->
+    <section class="view" id="view-closet">
+      <div class="backup-banner" id="backup-banner" hidden>
+        <p>Hace tiempo que no respaldas tu clóset.</p>
+        <button class="btn btn-small" data-action="export">Respaldar ahora</button>
+      </div>
+      <div class="chips" id="cat-filter" aria-label="Filtrar por tipo"></div>
+      <div class="grid" id="closet-grid"></div>
+      <div class="empty" id="closet-empty" hidden>
+        <svg class="empty-art" viewBox="0 0 120 90" aria-hidden="true"><path d="M60 14 a8 8 0 1 1 8 8 q-8 2 -8 10 L104 64 q6 4 0 8 H16 q-6 -4 0 -8 L60 32"/></svg>
+        <h2>Tu clóset está vacío</h2>
+        <p>Toca + y sácate una foto con la prenda puesta. La app quita el fondo sola.</p>
+        <button class="btn btn-ghost" data-action="load-samples">Probar con prendas de ejemplo</button>
+      </div>
+    </section>
+
+    <!-- Armar -->
+    <section class="view" id="view-outfit" hidden>
+      <div class="weather" id="weather"></div>
+      <div class="figure-card">
+        <div class="figure" id="figure"></div>
+      </div>
+      <div class="pickers" id="pickers"></div>
+      <div class="verdict" id="verdict"></div>
+      <div class="actions-row">
+        <button class="btn btn-accent" data-action="surprise">Sorpréndeme</button>
+        <button class="btn btn-ghost" data-action="save-outfit">Guardar</button>
+        <button class="btn btn-ghost" data-action="wear-today">Me lo puse hoy</button>
+      </div>
+      <h2 class="section-title">Outfits guardados</h2>
+      <div class="saved" id="saved-outfits"></div>
+    </section>
+
+    <!-- Colores -->
+    <section class="view" id="view-colors" hidden>
+      <div class="card palette-card">
+        <h2 class="section-title">Tu paleta</h2>
+        <div class="palette-wrap">
+          <svg class="wheel" id="wheel" viewBox="0 0 220 220" role="img" aria-label="Círculo cromático con los colores de tu clóset"></svg>
+          <div class="palette-side">
+            <p class="muted small" id="palette-summary"></p>
+            <div class="color-cloud" id="palette-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="color-ideas"></div>
+
+      <h2 class="section-title">Combinaciones para inspirarte</h2>
+      <div class="chips" id="combo-filter">
+        <button class="chip is-active" data-combo-n="2">2 colores</button>
+        <button class="chip" data-combo-n="3">3 colores</button>
+        <button class="chip" data-combo-n="4">4 o más</button>
+        <button class="chip chip-toggle" data-combo-owned="1" aria-pressed="false">Solo lo que tengo</button>
+      </div>
+      <div class="combos" id="combos"></div>
+
+      <h2 class="section-title">Teoría del color, simple</h2>
+      <div class="theory">
+        <article class="card lesson">
+          <h3>El círculo cromático</h3>
+          <p>Ordena los colores en una rueda: rojo, naranjo, amarillo, verde, azul y morado, con todos los tonos intermedios. Casi todas las reglas para combinar se reducen a mirar dónde está cada color en la rueda: si están cerca, se ven armónicos; si están en lados opuestos, hacen contraste.</p>
+          <div class="mini" data-swatches="Rojo,Naranjo,Amarillo,Verde,Azul,Morado"></div>
+        </article>
+        <article class="card lesson">
+          <h3>Neutros: tu base</h3>
+          <p>Negro, blanco, gris, beige, camel, café, azul marino y denim no están en la rueda (o casi no tienen color), así que combinan con todo. Mientras más neutros tengas, más outfits puedes armar con pocas prendas de color.</p>
+          <div class="mini" data-swatches="Negro,Blanco,Gris,Beige,Camel,Café,Azul marino,Denim"></div>
+        </article>
+        <article class="card lesson">
+          <h3>Monocromático</h3>
+          <p>Un solo color en distintas intensidades, por ejemplo rosado claro con rojo. Alarga la figura y se ve muy pensado. Para que no quede plano, mezcla texturas: tejido, satín, denim.</p>
+          <div class="mini" data-swatches="Rosado,Rojo,Burdeo"></div>
+        </article>
+        <article class="card lesson">
+          <h3>Análogos</h3>
+          <p>Colores vecinos en la rueda, como celeste, azul y lila. Combinan de forma suave y natural porque comparten parte de su tono. Funciona mejor si uno domina y los otros acompañan.</p>
+          <div class="mini" data-swatches="Celeste,Azul,Lila"></div>
+        </article>
+        <article class="card lesson">
+          <h3>Complementarios</h3>
+          <p>Colores opuestos en la rueda: azul y naranjo, lila y amarillo, rojo y verde. Hacen el contraste más fuerte. El truco es que uno sea el protagonista y el otro un detalle, o usar ambos en versión suave (pastel o apagada).</p>
+          <div class="mini" data-swatches="Azul,Naranjo"></div>
+        </article>
+        <article class="card lesson">
+          <h3>Triádicos</h3>
+          <p>Tres colores repartidos a la misma distancia en la rueda, como rojo, amarillo y azul. Es la combinación más atrevida. Úsala con tonos apagados o con un color grande y dos pequeños.</p>
+          <div class="mini" data-swatches="Rojo,Amarillo,Azul"></div>
+        </article>
+        <article class="card lesson">
+          <h3>La regla 60-30-10</h3>
+          <p>Reparte el outfit en tres partes: 60% un color base (normalmente neutro, como el pantalón y el abrigo), 30% un color secundario (el top) y 10% un acento (zapatos, cartera o aros). Así nada compite.</p>
+          <div class="bar-6030">
+            <span style="flex:6;background:#1F2B4D">60</span><span style="flex:3;background:#F4F3EF;color:#4B2338">30</span><span style="flex:1;background:#C62D2D">10</span>
+          </div>
+        </article>
+        <article class="card lesson">
+          <h3>Tres trucos más</h3>
+          <ul>
+            <li><b>Temperatura:</b> los colores cálidos (rojo, camel, terracota) se llevan bien entre sí, y los fríos (azul, lila, gris) también.</li>
+            <li><b>Intensidad:</b> los pasteles combinan con pasteles y los colores fuertes con colores fuertes. Mezclarlos puede verse desequilibrado.</li>
+            <li><b>Contraste claro-oscuro:</b> si dudas, combina una prenda clara con una oscura. Siempre se ve ordenado.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- Compras -->
+    <section class="view" id="view-shop" hidden>
+      <h2 class="section-title">Lo que le falta a tu clóset</h2>
+      <div class="gaps" id="gaps"></div>
+      <h2 class="section-title">Lista de compras</h2>
+      <form class="shop-form" id="shop-form">
+        <label class="sr" for="shop-text">Prenda que quieres comprar</label>
+        <input id="shop-text" type="text" placeholder="Ej: pantalón wide leg beige" autocomplete="off" required>
+        <button class="btn" type="submit">Agregar</button>
+      </form>
+      <ul class="shop-list" id="shop-list"></ul>
+    </section>
+
+    <!-- Más -->
+    <section class="view" id="view-more" hidden>
+      <div class="card">
+        <h2 class="section-title">Respaldo</h2>
+        <p class="muted" id="backup-status"></p>
+        <div class="actions-row">
+          <button class="btn" data-action="export">Exportar respaldo</button>
+          <label class="btn btn-ghost" for="import-file">Importar respaldo</label>
+          <input id="import-file" type="file" accept="application/json,.json" hidden>
+        </div>
+        <p class="muted small">Tus prendas viven solo en este teléfono. El respaldo es un archivo que puedes guardar en Drive o iCloud, y sirve para recuperarlo todo si cambias de celular.</p>
+      </div>
+      <div class="card">
+        <h2 class="section-title">Tu clóset en números</h2>
+        <div id="stats"></div>
+      </div>
+      <div class="card">
+        <h2 class="section-title">Prendas de ejemplo</h2>
+        <div class="actions-row">
+          <button class="btn btn-ghost" data-action="load-samples">Cargar ejemplos</button>
+          <button class="btn btn-ghost" data-action="clear-samples">Borrar ejemplos</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="section-title">Instalar en el celular</h2>
+        <p class="muted small">iPhone: abre esta página en Safari, toca Compartir y luego "Agregar a pantalla de inicio". Android: en Chrome, menú ⋮ y "Instalar app". Así se abre como app y tus datos quedan protegidos.</p>
+      </div>
+    </section>
+  </main>
+
+  <button class="fab" id="fab" data-action="add" aria-label="Agregar prenda">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <nav class="tabbar" aria-label="Secciones">
+    <button class="tab is-active" data-tab="closet">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6a2 2 0 1 1 2 2c-1 .3-2 1-2 2l9 6c1 .7.5 2-.7 2H3.7c-1.2 0-1.7-1.3-.7-2l9-6"/></svg>Clóset</button>
+    <button class="tab" data-tab="outfit">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 4-2 2 4 12H6l4-12-2-2z"/></svg>Armar</button>
+    <button class="tab" data-tab="colors">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-1 1.3-2-.6-1.2.3-2.5 1.6-2.5H17a4 4 0 0 0 4-4c0-5-4-9.5-9-9.5z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg>Colores</button>
+    <button class="tab" data-tab="shop">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 13H6zM9 8V6a3 3 0 0 1 6 0v2"/></svg>Compras</button>
+    <button class="tab" data-tab="more">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Más</button>
+  </nav>
+
+  <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" hidden></div>
+
+  <!-- Cámara -->
+  <div class="camera" id="camera" hidden>
+    <div class="camera-top">
+      <button class="cam-btn" data-action="close-camera" aria-label="Cerrar cámara">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <span id="camera-label" class="cam-title"></span>
+      <button class="cam-btn" data-action="flip-camera" aria-label="Cambiar cámara">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><path d="M9 13a3 3 0 0 1 5-2.2M15 14a3 3 0 0 1-5 2.2"/></svg></button>
+    </div>
+    <div class="camera-frame">
+      <div class="cam-box" id="cam-box">
+        <video id="camera-video" playsinline muted autoplay></video>
+        <svg class="guide" id="camera-guide" aria-hidden="true"></svg>
+        <div class="countdown" id="countdown" hidden></div>
+      </div>
+    </div>
+    <p class="camera-hint" id="camera-hint"></p>
+    <div class="camera-bottom">
+      <label class="cam-side" for="gallery-input">Galería</label>
+      <button class="shutter" data-action="shoot" aria-label="Sacar foto"></button>
+      <button class="cam-side" data-action="timer" id="timer-btn">Sin timer</button>
+    </div>
+  </div>
+  <input id="gallery-input" type="file" accept="image/*" hidden>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
