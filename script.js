@@ -1,45 +1,76 @@
 /* Mi Clóset — todo se guarda en el teléfono (IndexedDB). */
 'use strict';
 
-/* ---------- Siluetas ----------
-   BODY: guía de la cámara (el cuerpo con la prenda puesta).
-   WEAR: forma de la prenda, para íconos y prendas de ejemplo.
-   Todas usan viewBox 300x400, salvo vestidos: 300x533 (cuerpo completo). */
-const BODY = {
-  top: 'M135 0 L135 30 Q100 38 70 52 Q52 60 50 90 L44 250 L40 330 L62 332 L72 250 L76 150 L84 175 L90 260 L86 390 L214 390 L210 260 L216 175 L224 150 L228 250 L238 332 L260 330 L256 250 L250 90 Q248 60 230 52 Q200 38 165 30 L165 0',
-  bottom: 'M88 10 L212 10 L222 120 L214 250 L204 385 L166 385 L156 230 L150 140 L144 230 L134 385 L96 385 L86 250 L78 120 Z',
-  dress: 'M138 0 L138 18 Q112 24 90 34 Q78 40 76 60 L70 170 L68 230 L84 232 L92 170 L96 100 L100 115 L104 170 L100 260 L106 380 L112 525 L140 525 L148 380 L150 330 L152 380 L160 525 L188 525 L194 380 L200 260 L196 170 L200 115 L204 100 L208 170 L216 232 L232 230 L230 170 L224 60 Q222 40 210 34 Q188 24 162 18 L162 0',
-  shoes: 'M80 60 L118 60 L122 250 Q130 330 100 345 Q62 345 70 300 L80 250 Z M182 60 L220 60 L230 250 L238 300 Q240 345 200 345 Q170 330 178 250 Z',
+/* ---------- Cuerpo y siluetas ----------
+   Un solo cuerpo de referencia (300 de ancho x 900 de alto, de la cabeza a los pies).
+   Cada tipo de prenda se fotografía con un encuadre (ventana) de ese cuerpo, y el maniquí
+   ubica cada foto en su ventana: así todo calza a la misma escala. */
+const BODY_RIGHT = [
+  [163, 104],
+  ['C', 165, 122, 172, 130, 188, 136], ['C', 205, 141, 222, 144, 230, 156], ['C', 238, 168, 240, 186, 240, 205],
+  ['C', 241, 250, 246, 290, 249, 330], ['C', 252, 370, 258, 410, 262, 445], ['C', 266, 470, 266, 500, 256, 512],
+  ['C', 248, 520, 240, 506, 240, 486], ['C', 238, 470, 238, 455, 238, 445], ['C', 234, 405, 228, 370, 226, 335],
+  ['C', 224, 290, 220, 240, 214, 214], ['C', 214, 250, 204, 290, 200, 330], ['C', 198, 365, 214, 390, 218, 425],
+  ['C', 222, 460, 220, 490, 214, 520], ['C', 208, 570, 200, 610, 198, 640], ['C', 196, 670, 204, 700, 200, 730],
+  ['C', 196, 780, 184, 830, 182, 862], ['C', 184, 880, 196, 892, 192, 900], ['L', 160, 900],
+  ['C', 158, 890, 160, 875, 162, 862], ['C', 164, 800, 158, 700, 160, 640], ['C', 162, 580, 162, 500, 150, 452],
+];
+function buildBodyPath() {
+  const m = (x) => 300 - x; const segs = BODY_RIGHT.slice(1); const ends = [BODY_RIGHT[0]];
+  let d = `M${BODY_RIGHT[0][0]} ${BODY_RIGHT[0][1]}`;
+  for (const s of segs) {
+    d += s[0] === 'C' ? ` C${s[1]} ${s[2]} ${s[3]} ${s[4]} ${s[5]} ${s[6]}` : ` L${s[1]} ${s[2]}`;
+    ends.push(s[0] === 'C' ? [s[5], s[6]] : [s[1], s[2]]);
+  }
+  for (let i = segs.length - 1; i >= 0; i--) {
+    const s = segs[i], p = ends[i];
+    d += s[0] === 'C' ? ` C${m(s[3])} ${s[4]} ${m(s[1])} ${s[2]} ${m(p[0])} ${p[1]}` : ` L${m(p[0])} ${p[1]}`;
+  }
+  return d + ' Z';
+}
+const BODY_PATH = buildBodyPath();
+const HEAD = { cx: 150, cy: 58, rx: 33, ry: 44 };
+const bodySvgInner = () => `<path d="${BODY_PATH}"/><ellipse cx="${HEAD.cx}" cy="${HEAD.cy}" rx="${HEAD.rx}" ry="${HEAD.ry}"/>`;
+
+/* Ventanas de cada zona: [x, y, ancho, alto] en coordenadas del cuerpo */
+const WIN = {
+  top: [15, 110, 270, 360], outer: [15, 110, 270, 360],
+  bottom: [-60, 315, 420, 560], dress: [-72, 110, 444, 790], shoes: [90, 760, 120, 160],
 };
+const FIG = [-72, 100, 444, 830]; // lo que muestra el maniquí
+
+/* Formas de prendas (para íconos y ejemplos), también en coordenadas del cuerpo */
 const WEAR = {
-  top: 'M105 32 Q150 58 195 32 L245 60 L262 140 L228 150 L216 112 L214 360 L86 360 L84 112 L72 150 L38 140 L55 60 Z',
-  crop: 'M105 32 Q150 58 195 32 L245 60 L262 140 L228 150 L216 112 L214 250 L86 250 L84 112 L72 150 L38 140 L55 60 Z',
-  outer: 'M100 28 Q150 40 200 28 L250 58 L264 334 L232 338 L222 150 L220 392 L80 392 L78 150 L68 338 L36 334 L50 58 Z',
-  pants: 'M84 12 L216 12 L238 388 L162 388 L150 150 L138 388 L62 388 Z',
-  slim: 'M88 12 L212 12 L214 388 L160 388 L150 150 L140 388 L86 388 Z',
-  skirt: 'M86 12 L214 12 L252 300 L48 300 Z',
-  shorts: 'M84 12 L216 12 L230 172 L158 178 L150 110 L142 178 L70 172 Z',
-  dress: 'M112 22 Q150 46 188 22 L200 30 L206 180 L252 470 L48 470 L94 180 L100 30 Z',
-  sneakers: 'M74 232 Q72 204 100 200 Q128 204 126 232 L132 330 Q100 352 66 330 Z M174 232 Q172 204 200 200 Q228 204 226 232 L234 330 Q200 352 168 330 Z',
-  boots: 'M78 70 L122 70 L124 250 Q132 330 100 345 Q62 345 70 300 L76 250 Z M178 70 L222 70 L230 250 L238 300 Q240 345 200 345 Q168 330 176 250 Z',
+  top: 'M128 112 Q150 128 172 112 L190 132 L232 150 L246 228 L216 236 L212 210 L214 300 L222 430 L78 430 L86 300 L88 210 L84 236 L54 228 L68 150 L110 132 Z',
+  crop: 'M128 112 Q150 128 172 112 L190 132 L232 150 L246 228 L216 236 L212 210 L210 335 L90 335 L88 210 L84 236 L54 228 L68 150 L110 132 Z',
+  sweater: 'M128 112 Q150 128 172 112 L194 130 L234 150 L246 210 L252 330 L262 448 L236 452 L226 340 L216 250 L218 430 L82 430 L84 250 L74 340 L64 452 L38 448 L48 330 L54 210 L66 150 L106 130 Z',
+  outer: 'M124 110 Q150 140 176 110 L196 130 L234 150 L246 210 L252 330 L262 448 L236 452 L226 340 L218 250 L222 470 L78 470 L82 250 L74 340 L64 452 L38 448 L48 330 L54 210 L66 150 L104 130 Z',
+  pants: 'M100 322 L200 322 L222 430 L232 870 L166 870 L152 470 L148 470 L134 870 L68 870 L78 430 Z',
+  slim: 'M102 322 L198 322 L218 430 L198 870 L164 870 L154 480 L146 480 L136 870 L102 870 L82 430 Z',
+  skirt: 'M104 322 L196 322 L222 430 L246 700 L54 700 L78 430 Z',
+  shorts: 'M100 322 L200 322 L224 430 L228 540 L160 548 L150 470 L140 548 L72 540 L76 430 Z',
+  dress: 'M126 112 Q150 132 174 112 L196 124 L204 210 L200 330 L222 430 L252 760 L48 760 L78 430 L100 330 L96 210 L104 124 Z',
+  sneakers: 'M158 848 L190 848 Q200 870 198 902 L156 904 Q154 880 158 848 Z M142 848 L110 848 Q100 870 102 902 L144 904 Q146 880 142 848 Z',
+  boots: 'M160 790 L192 790 L196 902 L154 904 Z M140 790 L108 790 L104 902 L146 904 Z',
 };
 
 const CATS = {
-  top:    { label: 'Tops',       one: 'Top',      zone: 'top',    body: 'top',    wear: 'top',    fits: ['Polera', 'Camisa', 'Blusa', 'Crop top', 'Sweater', 'Peto', 'Body', 'Polo'],
-            hint: 'Ponte el top y calza hombros y caderas en la silueta. Funciona mejor frente a un espejo.' },
-  outer:  { label: 'Abrigos',    one: 'Abrigo',   zone: 'outer',  body: 'top',    wear: 'outer',  fits: ['Chaqueta', 'Blazer', 'Cárdigan', 'Polerón', 'Abrigo', 'Chaleco', 'Parka'],
-            hint: 'Ponte el abrigo como lo usarías (abierto o cerrado) y calza hombros y caderas en la silueta.' },
-  pants:  { label: 'Pantalones', one: 'Pantalón', zone: 'bottom', body: 'bottom', wear: 'pants',  fits: ['Wide leg', 'Cargo', 'Recto', 'Skinny', 'Baggy', 'Flare', 'Mom', 'Jogger', 'Palazzo'],
-            hint: 'Desde la cintura hasta los tobillos. Usa el temporizador y apoya el celular, o pídele a alguien.' },
-  skirt:  { label: 'Faldas',     one: 'Falda',    zone: 'bottom', body: 'bottom', wear: 'skirt',  fits: ['Mini', 'Midi', 'Larga', 'Plisada', 'Lápiz', 'Cargo'],
-            hint: 'Desde la cintura hasta los tobillos, aunque la falda sea corta, para que calce con el resto.' },
-  shorts: { label: 'Shorts',     one: 'Short',    zone: 'bottom', body: 'bottom', wear: 'shorts', fits: ['Jeans', 'Bermuda', 'Tela', 'Deportivo'],
-            hint: 'Desde la cintura hasta los tobillos, para que calce con el resto.' },
-  dress:  { label: 'Vestidos',   one: 'Vestido',  zone: 'dress',  body: 'dress',  wear: 'dress',  fits: ['Mini', 'Midi', 'Largo', 'Jumper', 'Enterito'], tall: true,
-            hint: 'Cuerpo completo, de hombros a tobillos. Usa el temporizador o pídele a alguien que te saque la foto.' },
-  shoes:  { label: 'Zapatos',    one: 'Zapatos',  zone: 'shoes',  body: 'shoes',  wear: 'sneakers', fits: ['Zapatillas', 'Botas', 'Botines', 'Sandalias', 'Tacos', 'Ballerinas', 'Mocasines', 'Plataformas'],
-            hint: 'Con los zapatos puestos, apunta a tus pies de frente y un poco desde arriba.' },
+  top:    { label: 'Tops',       one: 'Top',      zone: 'top',    wear: 'top',      fits: ['Polera', 'Camisa', 'Blusa', 'Crop top', 'Sweater', 'Peto', 'Body', 'Polo'],
+            hint: 'Ponte el top y calza hombros, brazos y caderas en la silueta. Frente a un espejo funciona mejor.' },
+  outer:  { label: 'Abrigos',    one: 'Abrigo',   zone: 'outer',  wear: 'outer',    fits: ['Chaqueta', 'Blazer', 'Cárdigan', 'Polerón', 'Abrigo', 'Chaleco', 'Parka'],
+            hint: 'Ponte el abrigo como lo usarías y calza hombros y brazos en la silueta.' },
+  pants:  { label: 'Pantalones', one: 'Pantalón', zone: 'bottom', wear: 'pants',    fits: ['Wide leg', 'Cargo', 'Recto', 'Skinny', 'Baggy', 'Flare', 'Mom', 'Jogger', 'Palazzo'],
+            hint: 'De la cintura a los tobillos. Apoya el celular y usa el temporizador, o pídele a alguien.' },
+  skirt:  { label: 'Faldas',     one: 'Falda',    zone: 'bottom', wear: 'skirt',    fits: ['Mini', 'Midi', 'Larga', 'Plisada', 'Lápiz', 'Cargo'],
+            hint: 'De la cintura a los tobillos, aunque la falda sea corta, para que calce con el resto.' },
+  shorts: { label: 'Shorts',     one: 'Short',    zone: 'bottom', wear: 'shorts',   fits: ['Jeans', 'Bermuda', 'Tela', 'Deportivo'],
+            hint: 'De la cintura a los tobillos, para que calce con el resto.' },
+  dress:  { label: 'Vestidos',   one: 'Vestido',  zone: 'dress',  wear: 'dress',    fits: ['Mini', 'Midi', 'Largo', 'Jumper', 'Enterito'],
+            hint: 'Cuerpo completo, de hombros a pies. Usa el temporizador o pídele a alguien que te saque la foto.' },
+  shoes:  { label: 'Zapatos',    one: 'Zapatos',  zone: 'shoes',  wear: 'sneakers', fits: ['Zapatillas', 'Botas', 'Botines', 'Sandalias', 'Tacos', 'Ballerinas', 'Mocasines', 'Plataformas'],
+            hint: 'Con los zapatos puestos, de pie, apunta a tus pies de frente.' },
 };
+const winOf = (cat) => WIN[CATS[cat].zone];
 const OPEN_FITS = /chaqueta|blazer|c[aá]rdigan|abrigo|chaleco/i;
 const FIT_IS_NOUN = new Set(['top', 'outer', 'shoes']);
 
@@ -280,8 +311,14 @@ function renderWeather(mode, msg) {
 }
 
 /* ---------- Imágenes ---------- */
-const sizeFor = (cat) => CATS[cat].tall ? [450, 800] : [450, 600];
-function canvasToBlob(c, type = 'image/jpeg', q = .82) { return new Promise((r) => c.toBlob(r, type, q)); }
+const OUT_W = 450;
+const sizeFor = (cat) => { const w = winOf(cat); return [OUT_W, Math.round(OUT_W * w[3] / w[2])]; };
+function canvasToBlob(c, type = 'image/jpeg', q = .85) { return new Promise((r) => c.toBlob(r, type, q)); }
+async function cutoutBlob(c) {
+  let b = await canvasToBlob(c, 'image/webp', .86);
+  if (!b || b.type !== 'image/webp') b = await canvasToBlob(c, 'image/png');
+  return b;
+}
 function drawCover(src, sw, sh, cat, mirror) {
   const [W, H] = sizeFor(cat);
   const c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -291,14 +328,18 @@ function drawCover(src, sw, sh, cat, mirror) {
   ctx.drawImage(src, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, W, H);
   return c;
 }
-function loadImageFile(file) {
+function loadImage(src) {
   return new Promise((res, rej) => {
-    const img = new Image(); const u = URL.createObjectURL(file);
-    img.onload = () => { URL.revokeObjectURL(u); res(img); }; img.onerror = rej; img.src = u;
+    const img = new Image(); const isBlob = src instanceof Blob; const u = isBlob ? URL.createObjectURL(src) : src;
+    img.onload = () => { if (isBlob) URL.revokeObjectURL(u); res(img); }; img.onerror = rej; img.src = u;
   });
 }
+async function blobToCanvas(blob) {
+  const img = await loadImage(blob); const c = document.createElement('canvas');
+  c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext('2d').drawImage(img, 0, 0); return c;
+}
 
-/* Quitar el fondo con un modelo que corre en el mismo celular (MediaPipe). Se descarga la primera vez. */
+/* Quitar el fondo automático (MediaPipe, corre en el mismo celular). Devuelve una máscara. */
 const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21';
 let segPromise = null;
 function getSegmenter() {
@@ -315,12 +356,11 @@ function getSegmenter() {
   }
   return segPromise;
 }
-async function removeBackground(canvas) {
+async function autoMask(canvas) {
   const seg = await getSegmenter();
   const res = seg.segment(canvas);
   const m = res.confidenceMasks[0]; const w = m.width, h = m.height; const p = m.getAsFloat32Array().slice();
   if (res.close) res.close();
-  // ¿La máscara marca a la persona o al fondo? Compara centro con bordes.
   let center = 0, cn = 0, edge = 0, en = 0;
   for (let y = 0; y < h; y += 4) for (let x = 0; x < w; x += 4) {
     const v = p[y * w + x];
@@ -331,49 +371,38 @@ async function removeBackground(canvas) {
   const mc = document.createElement('canvas'); mc.width = w; mc.height = h;
   const mx = mc.getContext('2d'); const id = mx.createImageData(w, h); let on = 0;
   for (let i = 0; i < p.length; i++) {
-    let v = invert ? 1 - p[i] : p[i];
-    v = Math.min(1, Math.max(0, (v - .3) / .4));
+    let v = invert ? 1 - p[i] : p[i]; v = Math.min(1, Math.max(0, (v - .3) / .4));
     id.data[i * 4 + 3] = v * 255; if (v > .5) on++;
   }
   const cover = on / p.length;
-  if (cover < .04 || cover > .96) throw new Error('mask');
+  if (cover < .03 || cover > .97) throw new Error('mask');
   mx.putImageData(id, 0, 0);
   const out = document.createElement('canvas'); out.width = canvas.width; out.height = canvas.height;
-  const o = out.getContext('2d'); o.drawImage(mc, 0, 0, out.width, out.height);
-  o.globalCompositeOperation = 'source-in'; o.drawImage(canvas, 0, 0);
+  out.getContext('2d').drawImage(mc, 0, 0, out.width, out.height);
   return out;
 }
 
-/* Color principal: zona central de la prenda, ignorando lo transparente o parecido al fondo */
-const COLOR_ZONE = { top: [.3, .7, .22, .75], outer: [.22, .4, .2, .75], bottom: [.3, .7, .08, .5], dress: [.34, .66, .15, .5], shoes: [.2, .8, .55, .9] };
-function detectColor(canvas, cat, transparent) {
+/* Color principal: zona central de la prenda, ignorando lo transparente */
+const COLOR_ZONE = { top: [[.32, .68]], outer: [[.24, .4], [.6, .76]], bottom: [[.36, .64]], dress: [[.38, .62]], shoes: [[.12, .88]] };
+const COLOR_Y = { top: [.25, .8], outer: [.25, .8], bottom: [.22, .55], dress: [.12, .4], shoes: [.45, .9] };
+function detectColor(canvas, cat) {
   const SW = 60, SH = Math.round(60 * canvas.height / canvas.width);
   const s = document.createElement('canvas'); s.width = SW; s.height = SH;
   const x = s.getContext('2d', { willReadFrequently: true }); x.drawImage(canvas, 0, 0, SW, SH);
   const d = x.getImageData(0, 0, SW, SH).data;
   const px = (i, j) => { const k = (j * SW + i) * 4; return [d[k], d[k + 1], d[k + 2], d[k + 3]]; };
-  let bg = null;
-  if (!transparent) {
-    bg = [0, 0, 0]; let n = 0;
-    for (let i = 0; i < SW; i++) for (const j of [0, 1, SH - 2, SH - 1]) { const p = px(i, j); bg[0] += p[0]; bg[1] += p[1]; bg[2] += p[2]; n++; }
-    for (let j = 2; j < SH - 2; j++) for (const i of [0, 1, SW - 2, SW - 1]) { const p = px(i, j); bg[0] += p[0]; bg[1] += p[1]; bg[2] += p[2]; n++; }
-    bg = bg.map((v) => v / n);
-  }
-  const z = COLOR_ZONE[CATS[cat].zone] || COLOR_ZONE.top;
+  const zone = CATS[cat].zone; const ys = COLOR_Y[zone];
   const buckets = new Map(); let fg = 0;
-  const scan = (x0, x1) => {
-    for (let j = Math.floor(SH * z[2]); j < SH * z[3]; j++) for (let i = Math.floor(SW * x0); i < SW * x1; i++) {
-      const p = px(i, j); if (p[3] < 160) continue; if (bg && colorDist(p, bg) < 70) continue; fg++;
+  const scan = (x0, x1, y0, y1) => {
+    for (let j = Math.floor(SH * y0); j < SH * y1; j++) for (let i = Math.floor(SW * x0); i < SW * x1; i++) {
+      const p = px(i, j); if (p[3] < 160) continue; fg++;
       const key = (p[0] >> 5) + ',' + (p[1] >> 5) + ',' + (p[2] >> 5);
       const b = buckets.get(key) || [0, 0, 0, 0]; b[0] += p[0]; b[1] += p[1]; b[2] += p[2]; b[3]++; buckets.set(key, b);
     }
   };
-  scan(z[0], z[1]); if (CATS[cat].zone === 'outer') scan(1 - z[1], 1 - z[0]);
-  if (fg < 30) {
-    let c = [0, 0, 0], m = 0;
-    for (let j = Math.floor(SH * .35); j < SH * .65; j++) for (let i = Math.floor(SW * .35); i < SW * .65; i++) { const p = px(i, j); if (p[3] < 160) continue; c[0] += p[0]; c[1] += p[1]; c[2] += p[2]; m++; }
-    return m ? rgbToHex(c[0] / m, c[1] / m, c[2] / m) : '#8E8E8E';
-  }
+  for (const [a, b] of COLOR_ZONE[zone]) scan(a, b, ys[0], ys[1]);
+  if (fg < 25) { buckets.clear(); fg = 0; scan(0, 1, 0, 1); }
+  if (!fg) return '#8E8E8E';
   let best = null; for (const b of buckets.values()) if (!best || b[3] > best[3]) best = b;
   return rgbToHex(best[0] / best[3], best[1] / best[3], best[2] / best[3]);
 }
@@ -385,13 +414,12 @@ async function startStream() {
   stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 1440 }, height: { ideal: 1920 } }, audio: false });
   const v = $('#camera-video'); v.srcObject = stream; v.classList.toggle('mirror', facing === 'user'); await v.play().catch(() => {});
 }
+function setGuide(svg, cat) { const w = winOf(cat); svg.setAttribute('viewBox', w.join(' ')); svg.innerHTML = bodySvgInner(); }
 async function openCamera(cat) {
-  pendingCat = cat; const c = CATS[cat];
-  $('#camera-label').textContent = c.one;
-  $('#camera-hint').textContent = c.hint;
-  const vb = c.tall ? '0 0 300 533' : '0 0 300 400';
-  const g = $('#camera-guide'); g.setAttribute('viewBox', vb); g.innerHTML = `<path d="${BODY[c.body]}"/>`;
-  $('#cam-box').style.setProperty('--ar', c.tall ? '9 / 16' : '3 / 4'); $('#cam-box').style.setProperty('--arn', c.tall ? '.5625' : '.75');
+  pendingCat = cat; const c = CATS[cat]; const w = winOf(cat);
+  $('#camera-label').textContent = c.one; $('#camera-hint').textContent = c.hint;
+  setGuide($('#camera-guide'), cat);
+  $('#cam-box').style.setProperty('--ar', `${w[2]} / ${w[3]}`); $('#cam-box').style.setProperty('--arn', String(w[2] / w[3]));
   $('#camera').hidden = false;
   try {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('no-cam');
@@ -415,25 +443,127 @@ async function shoot() {
     cd.hidden = true; counting = false; if ($('#camera').hidden) return;
   }
   const c = drawCover(v, v.videoWidth, v.videoHeight, pendingCat, facing === 'user');
-  closeCamera(); await afterCapture(c);
+  closeCamera(); openCutter(c, null, pendingCat, true);
 }
-async function afterCapture(canvas) {
-  openSheet(`<div class="working"><div class="spinner"></div><h2>Quitando el fondo…</h2>
-    <p class="muted small" style="margin:0">La primera vez tarda un poco más porque descarga la herramienta.</p></div>`);
-  const original = await canvasToBlob(canvas);
-  let cutout = null, colorSrc = canvas, transparent = false;
+
+/* ---------- Editor de recorte ---------- */
+const cut = { orig: null, mask: null, cat: 'top', tool: 'lasso', zoom: 1, undo: [], guide: true, drawing: false, pts: [], last: null, onDone: null };
+const CUT_HINT = {
+  lasso: 'Dibuja con el dedo una línea alrededor de la prenda. Se queda solo lo que quede adentro.',
+  erase: 'Pasa el dedo por lo que quieras sacar (fondo, piel, pelo).',
+  restore: 'Pasa el dedo por lo que borraste de más para recuperarlo.',
+  move: 'Arrastra para moverte por la foto cuando tengas zoom.',
+};
+function openCutter(origCanvas, maskCanvas, cat, tryAuto, onDone) {
+  cut.orig = origCanvas; cut.cat = cat; cut.undo = []; cut.zoom = 1; cut.onDone = onDone || null;
+  cut.mask = document.createElement('canvas'); cut.mask.width = origCanvas.width; cut.mask.height = origCanvas.height;
+  const mx = cut.mask.getContext('2d');
+  if (maskCanvas) mx.drawImage(maskCanvas, 0, 0); else { mx.fillStyle = '#000'; mx.fillRect(0, 0, cut.mask.width, cut.mask.height); }
+  const cv = $('#cut-canvas'); cv.width = origCanvas.width; cv.height = origCanvas.height;
+  $('#cutter').hidden = false; document.body.style.overflow = 'hidden';
+  setTool(maskCanvas ? 'erase' : 'lasso'); sizeCutCanvas(); drawCut();
+  if (tryAuto) runAuto(true);
+}
+function sizeCutCanvas() {
+  const st = $('#cut-stage'); const cv = $('#cut-canvas');
+  const maxW = st.clientWidth - 24, maxH = st.clientHeight - 8;
+  const base = Math.min(maxW, maxH * cv.width / cv.height);
+  cv.style.width = base * cut.zoom + 'px'; cv.style.height = base * cut.zoom * cv.height / cv.width + 'px';
+  $('#zoom-btn').textContent = `Zoom ${cut.zoom}×`;
+}
+function drawCut() {
+  const cv = $('#cut-canvas'); const x = cv.getContext('2d'); const W = cv.width, H = cv.height;
+  x.clearRect(0, 0, W, H);
+  x.globalAlpha = .22; x.drawImage(cut.orig, 0, 0); x.globalAlpha = 1;
+  const t = document.createElement('canvas'); t.width = W; t.height = H; const tx = t.getContext('2d');
+  tx.drawImage(cut.orig, 0, 0); tx.globalCompositeOperation = 'destination-in'; tx.drawImage(cut.mask, 0, 0);
+  x.drawImage(t, 0, 0);
+  if (cut.guide) {
+    const w = winOf(cut.cat); const s = W / w[2];
+    x.save(); x.scale(s, s); x.translate(-w[0], -w[1]);
+    x.lineWidth = 2.2 / s; x.setLineDash([8 / s, 7 / s]); x.strokeStyle = 'rgba(226,124,156,.9)';
+    x.stroke(new Path2D(BODY_PATH)); x.beginPath(); x.ellipse(HEAD.cx, HEAD.cy, HEAD.rx, HEAD.ry, 0, 0, Math.PI * 2); x.stroke();
+    x.restore();
+  }
+  if (cut.tool === 'lasso' && cut.pts.length > 1) {
+    x.save(); x.lineWidth = 3 * W / cv.clientWidth; x.strokeStyle = '#B9476F'; x.setLineDash([]);
+    x.beginPath(); x.moveTo(...cut.pts[0]); for (const p of cut.pts) x.lineTo(...p); x.stroke(); x.restore();
+  }
+}
+function setTool(t) {
+  cut.tool = t; for (const b of $$('[data-tool]')) b.classList.toggle('is-active', b.dataset.tool === t);
+  $('#cut-hint').textContent = CUT_HINT[t]; $('#cut-stage').classList.toggle('moving', t === 'move');
+}
+function pushUndo() {
+  const m = cut.mask; cut.undo.push(m.getContext('2d').getImageData(0, 0, m.width, m.height)); if (cut.undo.length > 15) cut.undo.shift();
+}
+function cutPoint(e) {
+  const cv = $('#cut-canvas'); const r = cv.getBoundingClientRect();
+  return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height];
+}
+function brushPx() { const cv = $('#cut-canvas'); return +$('#brush-size').value * cv.width / cv.clientWidth; }
+function paint(a, b) {
+  const x = cut.mask.getContext('2d'); x.save();
+  x.globalCompositeOperation = cut.tool === 'erase' ? 'destination-out' : 'source-over';
+  x.strokeStyle = '#000'; x.fillStyle = '#000'; x.lineCap = 'round'; x.lineJoin = 'round'; x.lineWidth = brushPx();
+  x.beginPath(); x.moveTo(...a); x.lineTo(...b); x.stroke();
+  x.beginPath(); x.arc(b[0], b[1], brushPx() / 2, 0, Math.PI * 2); x.fill(); x.restore();
+}
+async function runAuto(silent) {
+  $('#cut-hint').textContent = 'Buscando la silueta… la primera vez tarda unos segundos.';
   try {
-    const out = await removeBackground(canvas);
-    cutout = await canvasToBlob(out, 'image/webp', .85);
-    if (!cutout || cutout.type !== 'image/webp') cutout = await canvasToBlob(out, 'image/png');
-    colorSrc = out; transparent = true;
-  } catch { cutout = null; }
-  const hex = detectColor(colorSrc, pendingCat, transparent);
-  const fitDefault = '';
-  openEdit({ id: null, cat: pendingCat, fit: fitDefault, name: '', colorName: nearestColor(hex).name, detected: true,
-    photo: cutout || original, cutout: !!cutout, _original: original, _cutout: cutout, open: false });
-  if (!cutout) toast('No pude quitar el fondo; guardé la foto tal cual.');
+    const m = await autoMask(cut.orig); pushUndo();
+    const x = cut.mask.getContext('2d'); x.clearRect(0, 0, cut.mask.width, cut.mask.height); x.drawImage(m, 0, 0);
+    drawCut(); setTool('erase');
+    $('#cut-hint').textContent = 'Listo el recorte automático. Corrige con Borrar o Recuperar, o usa el Lazo para dejar solo la prenda.';
+  } catch {
+    setTool(cut.tool);
+    if (!silent) toast('El recorte automático no funcionó con esta foto. Usa el Lazo.');
+  }
 }
+function cutMaskIsFull() {
+  const m = cut.mask; const d = m.getContext('2d').getImageData(0, 0, m.width, m.height).data;
+  for (let i = 3; i < d.length; i += 4 * 97) if (d[i] < 250) return false;
+  return true;
+}
+async function finishCut() {
+  const W = cut.orig.width, H = cut.orig.height;
+  const out = document.createElement('canvas'); out.width = W; out.height = H; const o = out.getContext('2d');
+  o.drawImage(cut.orig, 0, 0); o.globalCompositeOperation = 'destination-in'; o.drawImage(cut.mask, 0, 0);
+  const full = cutMaskIsFull();
+  const photo = full ? await canvasToBlob(cut.orig) : await cutoutBlob(out);
+  const original = await canvasToBlob(cut.orig);
+  const hex = detectColor(full ? cut.orig : out, cut.cat);
+  closeCutter();
+  const res = { photo, original, cutout: !full, hex };
+  if (cut.onDone) cut.onDone(res);
+  else openEdit({ id: null, cat: cut.cat, fit: '', name: '', colorName: nearestColor(hex).name, detected: true, photo, original, cutout: !full, open: false });
+}
+function closeCutter() { $('#cutter').hidden = true; document.body.style.overflow = ''; cut.pts = []; }
+(function cutterEvents() {
+  const cv = $('#cut-canvas');
+  cv.addEventListener('pointerdown', (e) => {
+    if (cut.tool === 'move') return;
+    e.preventDefault(); cv.setPointerCapture(e.pointerId); cut.drawing = true; const p = cutPoint(e); cut.last = p;
+    if (cut.tool === 'lasso') cut.pts = [p]; else { pushUndo(); paint(p, p); drawCut(); }
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (!cut.drawing) return; const p = cutPoint(e);
+    if (cut.tool === 'lasso') cut.pts.push(p); else paint(cut.last, p);
+    cut.last = p; drawCut();
+  });
+  const end = () => {
+    if (!cut.drawing) return; cut.drawing = false;
+    if (cut.tool === 'lasso' && cut.pts.length > 8) {
+      pushUndo(); const x = cut.mask.getContext('2d'); x.save(); x.globalCompositeOperation = 'destination-in';
+      x.beginPath(); x.moveTo(...cut.pts[0]); for (const p of cut.pts) x.lineTo(...p); x.closePath(); x.fillStyle = '#000'; x.fill(); x.restore();
+      $('#cut-hint').textContent = 'Si quedó algo de más, usa Borrar. Si cortaste de más, Recuperar.';
+    }
+    cut.pts = []; drawCut();
+  };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+  window.addEventListener('resize', () => { if (!$('#cutter').hidden) sizeCutCanvas(); });
+})();
 
 /* ---------- Textos ---------- */
 function catOf(item) { return CATS[item.cat] || CATS.top; }
@@ -491,16 +621,17 @@ function ensureSelection() {
 }
 function isOpen(item) { return item && (item.open ?? OPEN_FITS.test(item.fit || '')); }
 function figureHtml(p, popZone) {
-  const img = (it, cls) => `<img class="pc ${cls} ${imgClass(it)} ${popZone && cls.startsWith(popZone) ? 'pop' : ''}" src="${photoUrl(it)}" alt="">`;
-  const ghost = (path, cls, vb = '0 0 300 400') => `<svg class="pc ghost ${cls}" viewBox="${vb}" aria-hidden="true"><path d="${path}"/></svg>`;
-  let h = '';
-  if (p.shoes) h += img(p.shoes, 'shoes'); else h += ghost(BODY.shoes, 'shoes');
+  const place = (zone) => { const w = WIN[zone]; const f = (n) => (n / FIG[2]).toFixed(4);
+    return `left:calc(var(--fw) * ${f(w[0] - FIG[0])});top:calc(var(--fw) * ${f(w[1] - FIG[1])});width:calc(var(--fw) * ${f(w[2])})`; };
+  const img = (it, zone, extra = '') => {
+    const z = zone === 'dress' ? 'top' : zone;
+    return `<img class="pc z-${z} ${extra} ${imgClass(it)} ${popZone === zone ? 'pop' : ''}" style="${place(zone)}" src="${photoUrl(it)}" alt="">`;
+  };
+  let h = `<svg class="mannequin" viewBox="${FIG.join(' ')}" aria-hidden="true">${bodySvgInner()}</svg>`;
+  if (p.shoes) h += img(p.shoes, 'shoes');
   if (p.top && p.top.cat === 'dress') h += img(p.top, 'dress');
-  else {
-    h += p.bottom ? img(p.bottom, 'bottom') : ghost(BODY.bottom, 'bottom');
-    h += p.top ? img(p.top, 'top') : ghost(BODY.top, 'top');
-  }
-  if (p.outer) h += img(p.outer, 'outer' + (isOpen(p.outer) ? ' open' : ''));
+  else { if (p.bottom) h += img(p.bottom, 'bottom'); if (p.top) h += img(p.top, 'top'); }
+  if (p.outer) h += img(p.outer, 'outer', isOpen(p.outer) ? 'open' : '');
   return h;
 }
 const ZONE_LABEL = { outer: 'Abrigo', top: 'Arriba', bottom: 'Abajo', shoes: 'Zapatos' };
@@ -740,8 +871,8 @@ function closeSheet() {
 function openAdd() {
   openSheet(`<h2>¿Qué te vas a probar?</h2>
     <div class="cat-grid">${Object.entries(CATS).map(([k, c]) =>
-      `<button class="cat-btn" data-pick-cat="${k}"><svg viewBox="${c.tall ? '0 0 300 500' : '0 0 300 400'}" aria-hidden="true"><path d="${WEAR[c.wear]}"/></svg>${c.one}</button>`).join('')}</div>
-    <p class="muted small" style="margin:0">Sácate la foto con la prenda puesta, ojalá frente a un espejo y con buena luz. La silueta te ayuda a que todas queden del mismo tamaño.</p>`);
+      `<button class="cat-btn" data-pick-cat="${k}"><svg viewBox="${winOf(k).join(' ')}" aria-hidden="true"><path d="${WEAR[c.wear]}"/></svg>${c.one}</button>`).join('')}</div>
+    <p class="muted small" style="margin:0">Sácate la foto con la prenda puesta, ojalá frente a un espejo y con buena luz. Después eliges qué parte de la foto conservar.</p>`);
 }
 let editing = null;
 function fitOptions(cat) { const custom = (state.meta.customFits || {})[cat] || []; return [...new Set([...CATS[cat].fits, ...custom])]; }
@@ -750,7 +881,6 @@ function openEdit(item) {
   editing = { ...item }; const isNew = !item.id;
   editing._url = URL.createObjectURL(item.photo);
   const worn = item.worn || [];
-  const canToggleBg = isNew && item._cutout;
   openSheet(`<h2>${isNew ? 'Nueva prenda' : esc(itemTitle(item))}</h2>
     <div class="edit-top">
       <div class="photo" id="edit-photo">${editPhotoHtml()}</div>
@@ -760,7 +890,7 @@ function openEdit(item) {
         <label class="field"><span>Fit / estilo</span>
           <input id="f-fit" list="fit-list" value="${esc(item.fit)}" placeholder="Ej: wide leg" autocomplete="off">
           <datalist id="fit-list">${fitOptions(item.cat).map((f) => `<option value="${esc(f)}">`).join('')}</datalist></label>
-        ${canToggleBg ? '<label class="switch"><input type="checkbox" id="f-bg" checked> Sin fondo</label>' : ''}
+        <button class="btn btn-small btn-ghost" data-action="recrop">Ajustar recorte</button>
         <label class="switch" id="open-wrap" ${item.cat === 'outer' ? '' : 'hidden'}><input type="checkbox" id="f-open" ${isOpen(item) ? 'checked' : ''}> Lo uso abierto</label>
       </div>
     </div>
@@ -790,7 +920,7 @@ async function saveItem() {
   }
   const isNew = !editing.id;
   const item = {
-    id: editing.id || uid(), cat, fit, name, colorName: editing.colorName, photo: editing.photo, cutout: !!editing.cutout,
+    id: editing.id || uid(), cat, fit, name, colorName: editing.colorName, photo: editing.photo, original: editing.original || null, cutout: !!editing.cutout,
     open: cat === 'outer' ? $('#f-open').checked : false,
     createdAt: editing.createdAt || new Date().toISOString(), worn: editing.worn || [], sample: !!editing.sample,
   };
@@ -810,11 +940,31 @@ async function deleteItem(btn) {
   state.items = state.items.filter((i) => i.id !== id); closeSheet(); renderAll(); toast('Prenda borrada');
 }
 
+async function recrop() {
+  if (!editing) return;
+  const src = editing.original || editing.photo;
+  const orig = await blobToCanvas(src);
+  let mask = null;
+  if (editing.cutout && editing.original) {
+    const cur = await blobToCanvas(editing.photo); mask = document.createElement('canvas'); mask.width = orig.width; mask.height = orig.height;
+    mask.getContext('2d').drawImage(cur, 0, 0, orig.width, orig.height);
+  }
+  const keep = editing; $('#sheet').hidden = true; $('#sheet-backdrop').hidden = true;
+  openCutter(orig, mask, $('#f-cat').value, false, (res) => {
+    keep.photo = res.photo; keep.original = res.original; keep.cutout = res.cutout;
+    URL.revokeObjectURL(keep._url); keep._url = URL.createObjectURL(res.photo);
+    $('#edit-photo').innerHTML = editPhotoHtml(); $('#sheet').hidden = false; $('#sheet-backdrop').hidden = false;
+  });
+  // si cancela, vuelve a la ficha
+  const restore = () => { if ($('#cutter').hidden && $('#sheet').hidden && editing) { $('#sheet').hidden = false; $('#sheet-backdrop').hidden = false; } };
+  $('[data-action="cut-cancel"]').addEventListener('click', () => setTimeout(restore, 0), { once: true });
+}
+
 /* ---------- Respaldo ---------- */
 function blobToDataUrl(b) { return new Promise((r) => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); }); }
 async function dataUrlToBlob(u) { return (await fetch(u)).blob(); }
 async function exportBackup() {
-  const items = await Promise.all(state.items.filter((i) => !i.sample).map(async (i) => ({ ...i, photo: await blobToDataUrl(i.photo) })));
+  const items = await Promise.all(state.items.filter((i) => !i.sample).map(async (i) => ({ ...i, photo: await blobToDataUrl(i.photo), original: i.original ? await blobToDataUrl(i.original) : null })));
   const data = { app: 'mi-closet', version: 2, exportedAt: new Date().toISOString(), items, outfits: state.outfits, shopping: state.shopping, customFits: state.meta.customFits || {}, location: state.meta.location || null };
   const name = `mi-closet-respaldo-${todayStr()}.json`;
   const file = new File([JSON.stringify(data)], name, { type: 'application/json' });
@@ -831,7 +981,7 @@ async function exportBackup() {
 async function importBackup(file) {
   try {
     const data = JSON.parse(await file.text()); if (data.app !== 'mi-closet') throw new Error();
-    for (const i of data.items || []) await DB.put('items', { ...i, photo: await dataUrlToBlob(i.photo) });
+    for (const i of data.items || []) await DB.put('items', { ...i, photo: await dataUrlToBlob(i.photo), original: i.original ? await dataUrlToBlob(i.original) : null });
     for (const o of data.outfits || []) await DB.put('outfits', o);
     for (const s of data.shopping || []) await DB.put('shopping', s);
     if (data.customFits) await setMeta('customFits', { ...(state.meta.customFits || {}), ...data.customFits });
@@ -843,7 +993,7 @@ async function importBackup(file) {
 
 /* ---------- Prendas de ejemplo (dibujadas, sin fondo) ---------- */
 const SAMPLES = [
-  ['top', 'Polera', 'Blanco', 'top'], ['top', 'Camisa', 'Celeste', 'top'], ['top', 'Sweater', 'Burdeo', 'top'], ['top', 'Crop top', 'Negro', 'crop'], ['top', 'Blusa', 'Rosado', 'top'],
+  ['top', 'Polera', 'Blanco', 'top'], ['top', 'Camisa', 'Celeste', 'top'], ['top', 'Sweater', 'Burdeo', 'sweater'], ['top', 'Crop top', 'Negro', 'crop'], ['top', 'Blusa', 'Rosado', 'top'],
   ['outer', 'Chaqueta', 'Denim', 'outer'], ['outer', 'Blazer', 'Beige', 'outer'],
   ['pants', 'Wide leg', 'Negro', 'pants'], ['pants', 'Cargo', 'Verde oliva', 'pants'], ['pants', 'Recto', 'Denim', 'slim'],
   ['skirt', 'Midi', 'Camel', 'skirt'], ['dress', 'Midi', 'Lila', 'dress'],
@@ -851,9 +1001,9 @@ const SAMPLES = [
 ];
 function drawSample(cat, hex, shape) {
   const [W, H] = sizeFor(cat); const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
-  x.scale(W / 300, W / 300);
+  const w = winOf(cat); const sc = W / w[2]; x.scale(sc, sc); x.translate(-w[0], -w[1]);
   const p = new Path2D(WEAR[shape]); x.fillStyle = hex; x.fill(p);
-  x.lineWidth = 2.5; x.strokeStyle = 'rgba(0,0,0,.22)'; x.stroke(p);
+  x.lineWidth = 2.5 / sc * 1.5; x.strokeStyle = 'rgba(0,0,0,.22)'; x.stroke(p);
   return canvasToBlob(c, 'image/png');
 }
 async function loadSamples() {
@@ -886,6 +1036,7 @@ document.addEventListener('click', async (e) => {
   const t = e.target.closest('button, [data-outfit]'); if (!t) return;
   const d = t.dataset;
   if (d.tab) return setTab(d.tab);
+  if (d.tool) return setTool(d.tool);
   if (d.filter) { state.filter = d.filter; return renderCloset(); }
   if (d.item) { const it = state.items.find((i) => i.id === d.item); if (it) openEdit(it); return; }
   if (d.pickCat) { closeSheet(); return openCamera(d.pickCat); }
@@ -905,6 +1056,14 @@ document.addEventListener('click', async (e) => {
   if (d.delShop) { await DB.del('shopping', d.delShop); state.shopping = state.shopping.filter((s) => s.id !== d.delShop); return renderShop(); }
   switch (d.action) {
     case 'add': return openAdd();
+    case 'recrop': return recrop();
+    case 'cut-cancel': closeCutter(); if (!cut.onDone) toast('Foto descartada'); return;
+    case 'cut-done': return finishCut();
+    case 'cut-undo': { const u = cut.undo.pop(); if (u) { cut.mask.getContext('2d').putImageData(u, 0, 0); drawCut(); } return; }
+    case 'cut-auto': return runAuto(false);
+    case 'cut-reset': { pushUndo(); const x = cut.mask.getContext('2d'); x.globalCompositeOperation = 'source-over'; x.fillStyle = '#000'; x.fillRect(0, 0, cut.mask.width, cut.mask.height); drawCut(); setTool('lasso'); return; }
+    case 'cut-zoom': cut.zoom = cut.zoom >= 3 ? 1 : cut.zoom + 1; sizeCutCanvas(); drawCut(); if (cut.zoom > 1 && cut.tool !== 'move') toast('Usa Mover para recorrer la foto'); return;
+    case 'cut-guide': cut.guide = !cut.guide; t.setAttribute('aria-pressed', String(cut.guide)); drawCut(); return;
     case 'close-sheet': return closeSheet();
     case 'save-item': return saveItem();
     case 'delete-item': return deleteItem(t);
@@ -932,10 +1091,6 @@ document.addEventListener('change', async (e) => {
     $('#fit-chips').innerHTML = opts.map((f) => `<button class="chip" data-fit="${esc(f)}">${esc(f)}</button>`).join('');
     $('#f-fit').value = ''; $('#open-wrap').hidden = editing.cat !== 'outer';
   }
-  if (t.id === 'f-bg' && editing) {
-    editing.cutout = t.checked; editing.photo = t.checked ? editing._cutout : editing._original;
-    URL.revokeObjectURL(editing._url); editing._url = URL.createObjectURL(editing.photo); $('#edit-photo').innerHTML = editPhotoHtml();
-  }
   if (t.dataset.check) { const s = state.shopping.find((x) => x.id === t.dataset.check); s.done = t.checked; await DB.put('shopping', s); renderShop(); }
 });
 document.addEventListener('submit', (e) => { if (e.target.id === 'city-form') { e.preventDefault(); searchCity($('#city-input').value.trim()); } });
@@ -945,8 +1100,8 @@ $('#shop-form').addEventListener('submit', async (e) => {
 $('#gallery-input').addEventListener('change', async (e) => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   closeCamera();
-  try { const img = await loadImageFile(f); await afterCapture(drawCover(img, img.naturalWidth, img.naturalHeight, pendingCat, false)); }
-  catch { closeSheet(); toast('No pude abrir esa imagen.'); }
+  try { const img = await loadImage(f); openCutter(drawCover(img, img.naturalWidth, img.naturalHeight, pendingCat, false), null, pendingCat, true); }
+  catch { toast('No pude abrir esa imagen.'); }
 });
 $('#import-file').addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) importBackup(f); });
 

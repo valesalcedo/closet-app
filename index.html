@@ -221,6 +221,38 @@
   </div>
   <input id="gallery-input" type="file" accept="image/*" hidden>
 
+  <!-- Editor de recorte -->
+  <div class="cutter" id="cutter" hidden>
+    <div class="cut-top">
+      <button class="cut-link" data-action="cut-cancel">Cancelar</button>
+      <span class="cam-title">Recorta tu prenda</span>
+      <button class="cut-link cut-done" data-action="cut-done">Listo</button>
+    </div>
+    <p class="cut-hint" id="cut-hint"></p>
+    <div class="cut-stage" id="cut-stage">
+      <canvas id="cut-canvas"></canvas>
+    </div>
+    <div class="cut-tools">
+      <div class="seg" role="group" aria-label="Herramienta">
+        <button class="seg-btn is-active" data-tool="lasso">Lazo</button>
+        <button class="seg-btn" data-tool="erase">Borrar</button>
+        <button class="seg-btn" data-tool="restore">Recuperar</button>
+        <button class="seg-btn" data-tool="move">Mover</button>
+      </div>
+      <div class="cut-row">
+        <label class="brush" for="brush-size"><span>Pincel</span>
+          <input type="range" id="brush-size" min="6" max="90" value="34"></label>
+        <button class="cut-mini" data-action="cut-zoom" id="zoom-btn">Zoom 1×</button>
+      </div>
+      <div class="cut-row">
+        <button class="cut-mini" data-action="cut-undo">Deshacer</button>
+        <button class="cut-mini" data-action="cut-auto">Auto</button>
+        <button class="cut-mini" data-action="cut-reset">Todo</button>
+        <button class="cut-mini" data-action="cut-guide" aria-pressed="true">Silueta</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="script.js"></script>

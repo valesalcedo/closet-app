@@ -1,5 +1,5 @@
 // Guarda la app para que abra sin internet. Siempre intenta la versión nueva primero.
-const CACHE = 'mi-closet-v2';
+const CACHE = 'mi-closet-v3';
 const SHELL = ['./', 'index.html', 'styles.css', 'script.js', 'manifest.json', 'icon-192.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k))))); self.clients.claim(); });
