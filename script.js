@@ -123,10 +123,11 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const daysSince = (iso) => iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 864e5) : Infinity;
+/* Íconos pixelados (cuadrícula de 12, se ven nítidos a 12 o 24 px) */
 const ICON = {
-  left: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
-  right: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>',
-  x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  left: '<svg class="pxi" viewBox="0 0 12 12" aria-hidden="true"><path d="M7 1h2v2h-2zM5 3h2v2h-2zM3 5h2v2h-2zM5 7h2v2h-2zM7 9h2v2h-2z"/></svg>',
+  right: '<svg class="pxi" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 1h2v2h-2zM5 3h2v2h-2zM7 5h2v2h-2zM5 7h2v2h-2zM3 9h2v2h-2z"/></svg>',
+  x: '<svg class="pxi" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2h2v2h-2zM4 4h2v2h-2zM6 6h2v2h-2zM8 8h2v2h-2zM8 2h2v2h-2zM6 4h2v2h-2zM4 6h2v2h-2zM2 8h2v2h-2z"/></svg>',
 };
 
 function hexToRgb(h) { h = h.replace('#', ''); return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)); }
@@ -337,6 +338,44 @@ function loadImage(src) {
 async function blobToCanvas(blob) {
   const img = await loadImage(blob); const c = document.createElement('canvas');
   c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext('2d').drawImage(img, 0, 0); return c;
+}
+
+/* ---------- Pixel art ----------
+   Dibuja una forma (en coordenadas del cuerpo, dentro de la ventana win) en una grilla chica:
+   borde oscuro de 1 píxel, brillo arriba/izquierda y sombra abajo/derecha, como un sprite. */
+function shadeHex(hex, f) {
+  const t = f > 0 ? 255 : 0, k = Math.abs(f);
+  return hexToRgb(hex).map((v) => Math.round(v + (t - v) * k));
+}
+function pixelArt(d, win, cols, rows, hex) {
+  const c = document.createElement('canvas'); c.width = cols; c.height = rows;
+  const x = c.getContext('2d', { willReadFrequently: true });
+  x.save(); x.scale(cols / win[2], rows / win[3]); x.translate(-win[0], -win[1]); x.fillStyle = '#000'; x.fill(new Path2D(d)); x.restore();
+  const src = x.getImageData(0, 0, cols, rows).data;
+  const out = x.createImageData(cols, rows); const o = out.data;
+  const on = (i, j) => i >= 0 && j >= 0 && i < cols && j < rows && src[(j * cols + i) * 4 + 3] > 110;
+  const base = hexToRgb(hex), hi = shadeHex(hex, .45), lo = shadeHex(hex, -.2), line = shadeHex(hex, -.6);
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+    let col = null;
+    if (on(i, j)) col = (!on(i - 1, j) || !on(i, j - 1)) ? hi : (!on(i + 1, j) || !on(i, j + 1)) ? lo : base;
+    else if (on(i - 1, j) || on(i + 1, j) || on(i, j - 1) || on(i, j + 1)) col = line;
+    if (col) { const k = (j * cols + i) * 4; o[k] = col[0]; o[k + 1] = col[1]; o[k + 2] = col[2]; o[k + 3] = 255; }
+  }
+  x.putImageData(out, 0, 0);
+  return c;
+}
+/* Íconos del menú "agregar": la forma de cada prenda, recortada a su tamaño y pixelada */
+const catIconCache = new Map();
+function catIcon(cat) {
+  if (!catIconCache.has(cat)) {
+    const p = new Path2D(WEAR[CATS[cat].wear]); const t = document.createElement('canvas').getContext('2d');
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let y = 0; y <= 920; y += 4) for (let x = -80; x <= 380; x += 4) if (t.isPointInPath(p, x, y)) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    const bw = x1 - x0 + 16, bh = y1 - y0 + 16; const big = 24;
+    const cols = bw >= bh ? big : Math.max(8, Math.round(big * bw / bh)), rows = bh >= bw ? big : Math.max(8, Math.round(big * bh / bw));
+    catIconCache.set(cat, pixelArt(WEAR[CATS[cat].wear], [x0 - 8, y0 - 8, bw, bh], cols, rows, '#FF9FCB').toDataURL());
+  }
+  return catIconCache.get(cat);
 }
 
 /* Quitar el fondo automático (MediaPipe, corre en el mismo celular). Devuelve una máscara. */
@@ -739,14 +778,14 @@ function wheelSvg(owned) {
   const accents = [...owned.keys()].map(colorByName).filter((c) => !c.n);
   for (const c of accents) {
     const a = (hueOf(c) - 90) * Math.PI / 180; const rad = (R + r) / 2;
-    s += `<circle cx="${(cx + rad * Math.cos(a)).toFixed(1)}" cy="${(cy + rad * Math.sin(a)).toFixed(1)}" r="11" fill="${c.hex}" stroke="#fff" stroke-width="3"/>`;
+    s += `<rect x="${(cx + rad * Math.cos(a) - 10).toFixed(1)}" y="${(cy + rad * Math.sin(a) - 10).toFixed(1)}" width="20" height="20" fill="${c.hex}" stroke="#fff" stroke-width="3"/>`;
   }
   const neutrals = [...owned.keys()].map(colorByName).filter((c) => c.n);
   neutrals.slice(0, 9).forEach((c, i) => {
     const n = Math.min(neutrals.length, 9); const a = (i / n) * Math.PI * 2 - Math.PI / 2; const rad = n === 1 ? 0 : 30;
-    s += `<circle cx="${(cx + rad * Math.cos(a)).toFixed(1)}" cy="${(cy + rad * Math.sin(a)).toFixed(1)}" r="10" fill="${c.hex}" stroke="#E7C9D4" stroke-width="2"/>`;
+    s += `<rect x="${(cx + rad * Math.cos(a) - 9).toFixed(1)}" y="${(cy + rad * Math.sin(a) - 9).toFixed(1)}" width="18" height="18" fill="${c.hex}" stroke="#4A2A63" stroke-width="2"/>`;
   });
-  if (!neutrals.length) s += `<text x="110" y="114" text-anchor="middle" font-size="11" fill="var(--muted)" stroke="none">neutros</text>`;
+  if (!neutrals.length) s += `<text x="110" y="114" text-anchor="middle" font-size="12" font-family="Pixelify Sans, monospace" fill="var(--muted)" stroke="none">neutros</text>`;
   return s;
 }
 function chipDot(name, missing) { const c = colorByName(name); return `<span class="${missing ? 'missing' : ''}"><i style="background:${c.hex}"></i>${esc(c.name)}</span>`; }
@@ -871,7 +910,7 @@ function closeSheet() {
 function openAdd() {
   openSheet(`<h2>¿Qué te vas a probar?</h2>
     <div class="cat-grid">${Object.entries(CATS).map(([k, c]) =>
-      `<button class="cat-btn" data-pick-cat="${k}"><svg viewBox="${winOf(k).join(' ')}" aria-hidden="true"><path d="${WEAR[c.wear]}"/></svg>${c.one}</button>`).join('')}</div>
+      `<button class="cat-btn" data-pick-cat="${k}"><img class="px-ico" src="${catIcon(k)}" alt="">${c.one}</button>`).join('')}</div>
     <p class="muted small" style="margin:0">Sácate la foto con la prenda puesta, ojalá frente a un espejo y con buena luz. Después eliges qué parte de la foto conservar.</p>`);
 }
 let editing = null;
@@ -991,7 +1030,7 @@ async function importBackup(file) {
   } catch { toast('Ese archivo no es un respaldo de Mi Clóset.'); }
 }
 
-/* ---------- Prendas de ejemplo (dibujadas, sin fondo) ---------- */
+/* ---------- Prendas de ejemplo (pixel art, sin fondo) ---------- */
 const SAMPLES = [
   ['top', 'Polera', 'Blanco', 'top'], ['top', 'Camisa', 'Celeste', 'top'], ['top', 'Sweater', 'Burdeo', 'sweater'], ['top', 'Crop top', 'Negro', 'crop'], ['top', 'Blusa', 'Rosado', 'top'],
   ['outer', 'Chaqueta', 'Denim', 'outer'], ['outer', 'Blazer', 'Beige', 'outer'],
@@ -999,11 +1038,12 @@ const SAMPLES = [
   ['skirt', 'Midi', 'Camel', 'skirt'], ['dress', 'Midi', 'Lila', 'dress'],
   ['shoes', 'Zapatillas', 'Blanco', 'sneakers'], ['shoes', 'Botas', 'Negro', 'boots'],
 ];
+const PIXEL = 6; // tamaño de cada "píxel" en la imagen final
 function drawSample(cat, hex, shape) {
-  const [W, H] = sizeFor(cat); const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
-  const w = winOf(cat); const sc = W / w[2]; x.scale(sc, sc); x.translate(-w[0], -w[1]);
-  const p = new Path2D(WEAR[shape]); x.fillStyle = hex; x.fill(p);
-  x.lineWidth = 2.5 / sc * 1.5; x.strokeStyle = 'rgba(0,0,0,.22)'; x.stroke(p);
+  const [W, H] = sizeFor(cat);
+  const small = pixelArt(WEAR[shape], winOf(cat), Math.round(W / PIXEL), Math.round(H / PIXEL), hex);
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+  x.imageSmoothingEnabled = false; x.drawImage(small, 0, 0, W, H);
   return canvasToBlob(c, 'image/png');
 }
 async function loadSamples() {

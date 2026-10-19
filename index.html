@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Mi Clóset</title>
-  <meta name="theme-color" content="#FBE3EA">
+  <meta name="theme-color" content="#FFC4E1">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Mi Clóset">
@@ -14,14 +14,17 @@
   <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,600&family=Nunito:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Nunito:wght@400;600;700;800&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <h1 class="brand">Mi Clóset <svg class="sparkle" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1 L14 10 L23 12 L14 14 L12 23 L10 14 L1 12 L10 10 Z"/></svg></h1>
-      <span class="topbar-sub" id="topbar-sub"></span>
+      <h1 class="brand">Mi Clóset <svg class="sparkle pxi" viewBox="0 0 9 9" aria-hidden="true"><path d="M4 0h1v9h-1zM0 4h9v1h-9zM3 3h3v3h-3z"/></svg></h1>
+      <div class="topbar-right">
+        <span class="topbar-sub" id="topbar-sub"></span>
+        <span class="win-btns" aria-hidden="true"></span>
+      </div>
     </div>
   </header>
 
@@ -35,7 +38,7 @@
       <div class="chips" id="cat-filter" aria-label="Filtrar por tipo"></div>
       <div class="grid" id="closet-grid"></div>
       <div class="empty" id="closet-empty" hidden>
-        <svg class="empty-art" viewBox="0 0 120 90" aria-hidden="true"><path d="M60 14 a8 8 0 1 1 8 8 q-8 2 -8 10 L104 64 q6 4 0 8 H16 q-6 -4 0 -8 L60 32"/></svg>
+        <svg class="empty-art pxi" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 2h3v1h-3zM6 3h1v1h-1zM10 3h1v2h-1zM9 5h1v1h-1zM8 6h1v2h-1zM7 8h3v1h-3zM5 9h2v1h-2zM10 9h2v1h-2zM3 10h2v1h-2zM12 10h2v1h-2zM1 11h2v1h-2zM14 11h2v1h-2zM1 12h15v2h-15z"/></svg>
         <h2>Tu clóset está vacío</h2>
         <p>Toca + y sácate una foto con la prenda puesta. La app quita el fondo sola.</p>
         <button class="btn btn-ghost" data-action="load-samples">Probar con prendas de ejemplo</button>
@@ -177,20 +180,22 @@
   </main>
 
   <button class="fab" id="fab" data-action="add" aria-label="Agregar prenda">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    <svg class="pxi" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 3h2v10h-2zM3 7h10v2h-10z"/></svg>
   </button>
 
   <nav class="tabbar" aria-label="Secciones">
-    <button class="tab is-active" data-tab="closet">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6a2 2 0 1 1 2 2c-1 .3-2 1-2 2l9 6c1 .7.5 2-.7 2H3.7c-1.2 0-1.7-1.3-.7-2l9-6"/></svg>Clóset</button>
-    <button class="tab" data-tab="outfit">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 4-2 2 4 12H6l4-12-2-2z"/></svg>Armar</button>
-    <button class="tab" data-tab="colors">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-1 1.3-2-.6-1.2.3-2.5 1.6-2.5H17a4 4 0 0 0 4-4c0-5-4-9.5-9-9.5z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg>Colores</button>
-    <button class="tab" data-tab="shop">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 13H6zM9 8V6a3 3 0 0 1 6 0v2"/></svg>Compras</button>
-    <button class="tab" data-tab="more">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Más</button>
+    <button class="tab is-active" data-tab="closet"><span class="ico">
+      <svg class="pxi" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 2h3v1h-3zM6 3h1v1h-1zM10 3h1v2h-1zM9 5h1v1h-1zM8 6h1v2h-1zM7 8h3v1h-3zM5 9h2v1h-2zM10 9h2v1h-2zM3 10h2v1h-2zM12 10h2v1h-2zM1 11h2v1h-2zM14 11h2v1h-2zM1 12h15v2h-15z"/></svg></span>Clóset</button>
+    <button class="tab" data-tab="outfit"><span class="ico">
+      <svg class="pxi" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1h1v2h-1zM10 1h1v2h-1zM5 3h6v4h-6zM6 7h4v1h-4zM5 8h6v2h-6zM4 10h8v2h-8zM3 12h10v2h-10zM2 14h12v1h-12z"/></svg></span>Armar</button>
+    <button class="tab" data-tab="colors"><span class="ico">
+      <svg class="pxi" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2h6v1h-6zM3 3h10v1h-10zM2 4h12v6h-12zM2 10h6v1h-6zM10 10h4v1h-4zM3 11h4v1h-4zM11 11h2v1h-2zM4 12h2v1h-2z"/>
+        <rect x="4" y="5" width="2" height="2" fill="#FF8FC4"/><rect x="7" y="4" width="2" height="2" fill="#FFE79A"/><rect x="10" y="5" width="2" height="2" fill="#ADEBD3"/><rect x="10" y="8" width="2" height="2" fill="#B2DCFF"/></svg></span>Colores</button>
+    <button class="tab" data-tab="shop"><span class="ico">
+      <svg class="pxi" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1h4v1h-4zM5 2h1v3h-1zM10 2h1v3h-1zM2 5h12v10h-12z"/>
+        <path fill="#fff" d="M5 8h2v1h-2zM9 8h2v1h-2zM5 9h6v1h-6zM6 10h4v1h-4zM7 11h2v1h-2z"/></svg></span>Compras</button>
+    <button class="tab" data-tab="more"><span class="ico">
+      <svg class="pxi" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 6h3v3h-3zM6 6h3v3h-3zM11 6h3v3h-3z"/></svg></span>Más</button>
   </nav>
 
   <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
@@ -200,7 +205,7 @@
   <div class="camera" id="camera" hidden>
     <div class="camera-top">
       <button class="cam-btn" data-action="close-camera" aria-label="Cerrar cámara">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        <svg class="pxi" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2h2v2h-2zM4 4h2v2h-2zM6 6h2v2h-2zM8 8h2v2h-2zM8 2h2v2h-2zM6 4h2v2h-2zM4 6h2v2h-2zM2 8h2v2h-2z"/></svg></button>
       <span id="camera-label" class="cam-title"></span>
       <button class="cam-btn" data-action="flip-camera" aria-label="Cambiar cámara">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><path d="M9 13a3 3 0 0 1 5-2.2M15 14a3 3 0 0 1-5 2.2"/></svg></button>
